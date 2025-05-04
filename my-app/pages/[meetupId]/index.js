@@ -1,49 +1,63 @@
 import MeetupDetail from "@/components/meetups/Meetupdetail";
+import { MongoClient, ObjectId } from "mongodb";
 
-function MeetupDetails() {
+function MeetupDetails(props) {
   return (
     <MeetupDetail
-      image="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Stadtbild_M%C3%BCnchen.jpg/1024px-Stadtbild_M%C3%BCnchen.jpg"
-      alt="A First Meetup"
-      title="First Meetup"
-      address="Some street 5, Some city"
-      description="The is first meetup"
+      image={props.meetupData.image}
+      alt={props.meetupData.title}
+      title={props.meetupData.title}
+      address={props.meetupData.address}
+      description={props.meetupData.description}
     />
   );
 }
 
 export async function getStaticPaths() {
+  const client = await MongoClient.connect(
+    "mongodb+srv://kristin:091888181@cluster0.zflq6r4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const meetups = await meetupsCollection.find({}, { _id: 1 }).toArray();
+
+  client.close();
+
   return {
     fallback: false,
-    paths: [
-      {
-        params: {
-          meetupId: "m1",
-        },
-      },
-      {
-        params: {
-          meetupId: "m2",
-        },
-      },
-    ],
+    paths: meetups.map((meetup) => ({
+      params: { meetupId: meetup._id.toString() },
+    })),
   };
 }
 
 export async function getStaticProps(context) {
   // fetch data for a single meetup
   const meetupId = context.params.meetupId;
-  console.log(meetupId);
+
+  const client = await MongoClient.connect(
+    "mongodb+srv://kristin:091888181@cluster0.zflq6r4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const selectedMeetup = await meetupsCollection.findOne({
+    _id: new ObjectId(meetupId),
+  });
+
+  client.close();
 
   return {
     props: {
       meetupData: {
-        image:
-          "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Stadtbild_M%C3%BCnchen.jpg/1024px-Stadtbild_M%C3%BCnchen.jpg",
-        id: meetupId,
-        title: "First Meetup",
-        address: "Some street 5, Some city",
-        description: "The is first meetup",
+        id: selectedMeetup._id.toString(),
+        title: selectedMeetup.title,
+        image: selectedMeetup.image,
+        address: selectedMeetup.address,
+        description: selectedMeetup.description,
       },
     },
   };
